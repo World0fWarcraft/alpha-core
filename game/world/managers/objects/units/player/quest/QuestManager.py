@@ -58,6 +58,10 @@ class QuestManager:
     def is_quest_log_full(self):
         return len(self.active_quests) >= MAX_QUEST_LOG
 
+    @staticmethod
+    def can_interact_with_quest_giver(quest_giver):
+        return bool(quest_giver) and (not quest_giver.is_unit() or quest_giver.is_quest_giver())
+
     def should_interact_with_go(self, game_object):
         if game_object.gobject_template.type == GameObjectTypes.TYPE_CHEST:
             if game_object.gobject_template.data1 != 0:
@@ -128,6 +132,9 @@ class QuestManager:
     def get_dialog_status(self, quest_giver):
         dialog_status = QuestGiverStatus.QUEST_GIVER_NONE
         new_dialog_status = QuestGiverStatus.QUEST_GIVER_NONE
+
+        if not QuestManager.can_interact_with_quest_giver(quest_giver):
+            return dialog_status
 
         if self.player_mgr.is_hostile_to(quest_giver):
             return dialog_status
@@ -299,6 +306,9 @@ class QuestManager:
         return QuestState.QUEST_GREETING
 
     def get_active_quest_num_from_quest_giver(self, quest_giver):
+        if not QuestManager.can_interact_with_quest_giver(quest_giver):
+            return 0
+
         quest_num: int = 0
 
         relations_list = QuestManager.get_quest_giver_relations(quest_giver)

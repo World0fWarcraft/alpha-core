@@ -23250,5 +23250,72 @@ begin not atomic
         insert into applied_updates values ('270320262');
     end if;
 
+    -- 19/04/2026 1
+    if (select count(*) from applied_updates where id='190420261') = 0 then
+        -- Closes https://github.com/The-Alpha-Project/alpha-core/issues/1661
+        -- Captain Placeholder should offer and complete both Menethil -> Auberdine/Theramore boat placeholder quests.
+        INSERT INTO `creature_quest_starter` (`entry`, `quest`) VALUES (3896, 1126)
+            ON DUPLICATE KEY UPDATE `quest` = VALUES(`quest`);
+
+        INSERT INTO `creature_quest_finisher` (`entry`, `quest`) VALUES (3896, 1126)
+            ON DUPLICATE KEY UPDATE `quest` = VALUES(`quest`);
+
+        -- Sniffed quest list levels for boat placeholder teleport menus.
+        UPDATE `quest_template` SET `QuestLevel` = 1 WHERE `entry` IN (796, 797, 798, 799, 801, 802, 803, 1018, 1019, 1124, 1126);
+
+        -- Prevent boat placeholder NPCs from offering another teleport while their 2 second teleport cast is active.
+        DELETE FROM `quest_end_scripts`
+        WHERE `id` IN (796, 797, 798, 799, 801, 802, 803, 1018, 1019, 1124, 1126)
+            AND `comments` LIKE 'Boat placeholder teleport - % QuestGiver Flag';
+        INSERT INTO `quest_end_scripts` (
+            `id`, `delay`, `priority`, `command`, `datalong`, `datalong2`, `datalong3`, `datalong4`,
+            `target_param1`, `target_param2`, `target_type`, `data_flags`,
+            `dataint`, `dataint2`, `dataint3`, `dataint4`, `x`, `y`, `z`, `o`, `condition_id`, `comments`
+        ) VALUES
+        (796, 0, 0, 4, 147, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Remove QuestGiver Flag'),
+        (796, 3, 0, 4, 147, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Restore QuestGiver Flag'),
+        (797, 0, 0, 4, 147, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Remove QuestGiver Flag'),
+        (797, 3, 0, 4, 147, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Restore QuestGiver Flag'),
+        (798, 0, 0, 4, 147, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Remove QuestGiver Flag'),
+        (798, 3, 0, 4, 147, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Restore QuestGiver Flag'),
+        (799, 0, 0, 4, 147, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Remove QuestGiver Flag'),
+        (799, 3, 0, 4, 147, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Restore QuestGiver Flag'),
+        (801, 0, 0, 4, 147, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Remove QuestGiver Flag'),
+        (801, 3, 0, 4, 147, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Restore QuestGiver Flag'),
+        (802, 0, 0, 4, 147, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Remove QuestGiver Flag'),
+        (802, 3, 0, 4, 147, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Restore QuestGiver Flag'),
+        (803, 0, 0, 4, 147, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Remove QuestGiver Flag'),
+        (803, 3, 0, 4, 147, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Restore QuestGiver Flag'),
+        (1018, 0, 0, 4, 147, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Remove QuestGiver Flag'),
+        (1018, 3, 0, 4, 147, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Restore QuestGiver Flag'),
+        (1019, 0, 0, 4, 147, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Remove QuestGiver Flag'),
+        (1019, 3, 0, 4, 147, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Restore QuestGiver Flag'),
+        (1124, 0, 0, 4, 147, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Remove QuestGiver Flag'),
+        (1124, 3, 0, 4, 147, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Restore QuestGiver Flag'),
+        (1126, 0, 0, 4, 147, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Remove QuestGiver Flag'),
+        (1126, 3, 0, 4, 147, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Boat placeholder teleport - Restore QuestGiver Flag');
+
+        -- Sniffed boat placeholder greetings.
+        DELETE FROM `quest_greeting` WHERE `entry` IN (3895, 3896) AND `type` = 0;
+        INSERT INTO `quest_greeting` (`entry`, `type`, `content_default`, `emote_id`, `emote_delay`) VALUES
+        (3895, 0, 'You look like a smooth criminal. Looking for a boat ride?', 10, 0),
+        (3896, 0, 'Ahoy! Welcome to Captain Placeholder''s Placeholder Boat Ride!', 0, 0);
+
+        -- Sniffed teleport destination positions.
+        UPDATE `spell_target_position`
+        SET `target_position_x` = -3761.13, `target_position_y` = -705.091, `target_position_z` = 8.34659
+        WHERE `id` = 6348 AND `target_map` = 0;
+
+        UPDATE `spell_target_position`
+        SET `target_position_x` = 6476.85, `target_position_y` = 614.586, `target_position_z` = 7
+        WHERE `id` = 6349 AND `target_map` = 1;
+
+        UPDATE `spell_target_position`
+        SET `target_position_x` = -3974.05, `target_position_y` = -4744.09, `target_position_z` = 20
+        WHERE `id` = 6719 AND `target_map` = 1;
+
+        insert into applied_updates values ('190420261');
+    end if;
+
 end $
 delimiter ;

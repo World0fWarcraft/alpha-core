@@ -43,6 +43,8 @@ class QuestGiverHelloHandler:
         if not is_item and player_mgr.is_hostile_to(quest_giver):
             Logger.warning(f'{reader.opcode_str()}, quest giver with guid: {guid} is hostile.')
             return 0
+        if not is_item and not player_mgr.quest_manager.can_interact_with_quest_giver(quest_giver):
+            return 0
 
         # TODO: Remove feign death from player
         # TODO: If the gossip menu is already open, do nothing

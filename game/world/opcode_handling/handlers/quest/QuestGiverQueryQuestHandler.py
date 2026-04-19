@@ -39,6 +39,8 @@ class QuestGiverQueryQuestHandler:
             quest_giver = quest_giver if quest_giver else player_mgr.get_map().get_surrounding_unit_by_guid(player_mgr, guid)
             if not quest_giver:
                 return 0
+            elif not player_mgr.quest_manager.can_interact_with_quest_giver(quest_giver):
+                return 0
             elif not player_mgr.quest_manager.check_quest_giver_npc_is_related(quest_giver, quest_entry):
                 return 0
         elif high_guid == HighGuid.HIGHGUID_GAMEOBJECT:
