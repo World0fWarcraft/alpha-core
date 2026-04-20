@@ -2,7 +2,7 @@ from struct import unpack
 from game.world.opcode_handling.HandlerValidator import HandlerValidator
 from utils.GuidUtils import GuidUtils
 from utils.Logger import Logger
-from utils.constants.MiscCodes import HighGuid
+from utils.constants.MiscCodes import HighGuid, QuestGiverStatus
 
 
 class QuestGiverStatusHandler:
@@ -41,6 +41,9 @@ class QuestGiverStatusHandler:
 
         # Only units are able to provide quest status.
         if player_mgr and quest_giver.is_unit():
+            if not player_mgr.quest_manager.can_interact_with_quest_giver(quest_giver):
+                player_mgr.quest_manager.send_quest_giver_status(guid, QuestGiverStatus.QUEST_GIVER_NONE)
+                return 0
             quest_giver_status = player_mgr.quest_manager.get_dialog_status(quest_giver)
             player_mgr.quest_manager.send_quest_giver_status(guid, quest_giver_status)
 
