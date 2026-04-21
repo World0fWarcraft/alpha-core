@@ -48,3 +48,7 @@ class AccountSecurityLevel(IntEnum):
     PLAYER = 0
     GM = 1
     DEV = 2
+
+
+class AddonSubscriptionTopic(IntEnum):
+    MOUNT_STATE = 1

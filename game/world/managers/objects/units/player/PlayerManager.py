@@ -102,8 +102,6 @@ class PlayerManager(UnitManager):
 
         self.chat_flags = chat_flags
         self.outdated_addon_api = False
-        self.addon_api_last_request_ts = {}
-        self.addon_mount_channel_name = ''
         self.afk_message = ''
         self.dnd_message = ''
         self.group_status = WhoPartyStatus.WHO_PARTY_STATUS_NOT_IN_PARTY
@@ -355,6 +353,8 @@ class PlayerManager(UnitManager):
         self.on_zone_change(self.zone)
 
     def logout(self):
+        from game.world.managers.objects.units.player.ChatAddonManager import ChatAddonManager
+
         self.enqueue_packet(PacketWriter.get_packet(OpCode.SMSG_LOGOUT_COMPLETE))
         self.inventory.clear_item_read_translation_timers()
         TradeManager.cancel_trade(self)
@@ -371,6 +371,7 @@ class PlayerManager(UnitManager):
         self.aura_manager.remove_all_auras()
         self.pet_manager.detach_active_pets(is_logout=True)
         self.leave_combat()
+        ChatAddonManager.clear_player_state(self.guid)
 
         # Channels weren't saved on logout until Patch 0.5.5
         ChannelManager.leave_all_channels(self, logout=True)
