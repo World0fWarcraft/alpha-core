@@ -5,7 +5,9 @@ from time import monotonic, time
 from database.dbc.DbcDatabaseManager import DbcDatabaseManager
 from database.realm.RealmDatabaseManager import RealmDatabaseManager
 from game.world.WorldSessionStateHandler import WorldSessionStateHandler
+from game.world.managers.objects.units.player.ChannelManager import ChannelManager
 from network.packet.PacketWriter import PacketWriter
+from utils.ConfigManager import config
 from utils.Logger import Logger
 from utils.constants.MiscCodes import ChatFlags, ChatMsgs, Languages
 from utils.constants.OpCodes import OpCode
@@ -43,13 +45,14 @@ MAX_ADDON_TOKEN_LENGTH = 24
 MAX_ADDON_SETTINGS_LENGTH = 72
 MAX_ADDON_FLAGS_VALUE = 18446744073709551615
 # Public addon API versions start at 1 for each currently supported feature surface.
-ADDON_API_VERSION_ORDER = ('auras', 'distance', 'config', 'guild', 'pet')
+ADDON_API_VERSION_ORDER = ('auras', 'distance', 'config', 'guild', 'pet', 'mount')
 ADDON_API_VERSIONS = {
     'auras': 1,
     'distance': 1,
     'config': 1,
     'guild': 1,
     'pet': 1,
+    'mount': 1,
 }
 INVALID_LEGACY_COMMANDS = {
     'getunitauras',
@@ -63,11 +66,16 @@ OUTDATED_ADDON_NOTIFICATION = (
     f'TargetDistance v{ADDON_API_VERSIONS["distance"]}, '
     f'Config v{ADDON_API_VERSIONS["config"]}, '
     f'Guild v{ADDON_API_VERSIONS["guild"]}, '
-    f'Pet v{ADDON_API_VERSIONS["pet"]}).'
+    f'Pet v{ADDON_API_VERSIONS["pet"]}, '
+    f'Mount v{ADDON_API_VERSIONS["mount"]}).'
 )
 
 
 class ChatAddonManager:
+
+    @staticmethod
+    def _is_addon_api_enabled():
+        return bool(config.Server.General.enable_addons_chat_api)
 
     @staticmethod
     def _get_spell_icon_path(icon_id):
@@ -84,6 +92,15 @@ class ChatAddonManager:
         try:
             command, args = ChatAddonManager._parse_request(message)
             Logger.addon(f'Request [{command}] from [{player_mgr.get_name()}], args={args}.')
+
+            if not ChatAddonManager._is_addon_api_enabled():
+                request_token = ChatAddonManager._extract_request_token(args)
+                ChatAddonManager._send_error(channel, player_mgr, AddonErrorCodes.INVALID_FUNCTION, PLAYER,
+                                             request_token)
+                Logger.addon(
+                    f'Request [{command}] from [{player_mgr.get_name()}] rejected, addon API is disabled.'
+                )
+                return
 
             if not ChatAddonManager._request_allowed(player_mgr, command):
                 unit_id = PLAYER
@@ -107,6 +124,10 @@ class ChatAddonManager:
             if code < AddonErrorCodes.SUCCESS:
                 ChatAddonManager._send_error(channel, player_mgr, code, unit_id, request_token)
                 return
+
+            if command == 'sub_mount':
+                player_mgr.addon_mount_channel_name = channel.name
+                Logger.addon(f'Mount state subscription enabled for [{player_mgr.get_name()}] on [{channel.name}].')
 
             lines = [line[:MAX_ADDON_RESPONSE_LINE_LENGTH] for line in res.rsplit('\n') if line]
             packets = []
@@ -138,6 +159,20 @@ class ChatAddonManager:
         return (
             AddonErrorCodes.SUCCESS,
             'api,' + ','.join(api_fields),
+            PLAYER,
+            ''
+        )
+
+    @staticmethod
+    def subscribe_mount_state(player_mgr, args):
+        if args:
+            return AddonErrorCodes.INVALID_REQUEST, '', PLAYER, ''
+        if not ChatAddonManager._is_addon_api_enabled():
+            return AddonErrorCodes.INVALID_FUNCTION, '', PLAYER, ''
+
+        return (
+            AddonErrorCodes.SUCCESS,
+            ChatAddonManager._build_mount_state_response(player_mgr),
             PLAYER,
             ''
         )
@@ -291,6 +326,40 @@ class ChatAddonManager:
         player_mgr.enqueue_packet(packet)
 
     @staticmethod
+    def send_mount_state_update(player_mgr):
+        if not player_mgr.addon_mount_channel_name:
+            return False
+
+        if not ChatAddonManager._is_addon_api_enabled():
+            Logger.addon(
+                f'Mount state subscription cleared for [{player_mgr.get_name()}], addon API is disabled.'
+            )
+            player_mgr.addon_mount_channel_name = ''
+            return False
+
+        channel_name = player_mgr.addon_mount_channel_name
+        channel = ChannelManager.get_channel(channel_name, player_mgr) if channel_name else None
+        if not channel or not channel.is_addon() or not channel.player_in_channel(player_mgr):
+            Logger.addon(
+                f'Mount state subscription cleared for [{player_mgr.get_name()}], invalid channel [{channel_name}].'
+            )
+            player_mgr.addon_mount_channel_name = ''
+            return False
+
+        mount_state = 'mounted' if player_mgr.is_mounted() else 'unmounted'
+        packet = ChatAddonManager._get_message_packet(
+            player_mgr.guid,
+            ChatFlags.CHAT_TAG_NONE,
+            ChatAddonManager._build_mount_state_response(player_mgr),
+            ChatMsgs.CHAT_MSG_CHANNEL,
+            Languages.LANG_UNIVERSAL,
+            channel=channel.name
+        )
+        player_mgr.enqueue_packet(packet)
+        Logger.addon(f'Mount state push for [{player_mgr.get_name()}]: [{mount_state}] on [{channel.name}].')
+        return True
+
+    @staticmethod
     def _get_message_packet(guid, chat_flags, message, chat_type, lang, channel=None):
         message_bytes = PacketWriter.string_to_bytes(message)
 
@@ -417,6 +486,11 @@ class ChatAddonManager:
         return response
 
     @staticmethod
+    def _build_mount_state_response(player_mgr):
+        mounted = 1 if player_mgr.is_mounted() else 0
+        return f'mnt,{mounted}'
+
+    @staticmethod
     def _extract_request_token(args):
         if not args:
             return ''
@@ -530,4 +604,5 @@ ADDON_COMMAND_DEFINITIONS = {
     'get_guild_roster': ChatAddonManager.get_guild_roster,
     'notify_reloadui': ChatAddonManager.notify_reload_ui,
     'get_pet_bar': ChatAddonManager.get_pet_action_bar,
+    'sub_mount': ChatAddonManager.subscribe_mount_state,
 }
